@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TechGuard — Parental DNS Frontend</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #0f1117;
+      color: #e8eaf0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      line-height: 1.6;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+    }
+    .container { max-width: 700px; width: 100%; text-align: center; }
+    h1 { font-size: 2.5rem; font-weight: 800; letter-spacing: 1.5px; margin-bottom: 8px; }
+    h1 span { color: #00A3FF; }
+    .subtitle { color: #8B949E; font-size: 0.9rem; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 30px; }
+    .badge {
+      display: inline-block;
+      background: #21262D;
+      color: #C9D1D9;
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      margin-bottom: 30px;
+    }
+    .badge::before { content: ''; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #10B981; margin-right: 8px; vertical-align: middle; }
+    .links { display: flex; flex-direction: column; gap: 10px; margin-bottom: 30px; }
+    .links a {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 12px 20px; border-radius: 8px;
+      background: #161b27; border: 0.5px solid rgba(255,255,255,0.07);
+      color: #e8eaf0; text-decoration: none;
+      transition: border-color 0.15s;
+      font-size: 0.95rem;
+    }
+    .links a:hover { border-color: rgba(255,255,255,0.18); }
+    .links a i { font-size: 1.2rem; }
+    .features {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 30px;
+    }
+    .feature {
+      background: #161b27; border: 0.5px solid rgba(255,255,255,0.07);
+      border-radius: 8px; padding: 14px; text-align: left;
+    }
+    .feature strong { color: #00A3FF; display: block; margin-bottom: 4px; font-size: 0.85rem; }
+    .feature span { color: #8B949E; font-size: 0.8rem; }
+    footer { margin-top: 40px; color: #555d75; font-size: 0.8rem; }
+    footer a { color: #6c8aff; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>TECH<span>GUARD</span></h1>
+    <div class="subtitle">Parental DNS Frontend</div>
+    <div class="badge">Technitium Integrated</div>
+
+    <div class="links">
+      <a href="https://github.com/siderismsp/techguard">
+        <svg viewBox="0 0 16 16" width="16" height="16" fill="#e8eaf0"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+        GitHub Repository
+      </a>
+      <a href="https://github.com/siderismsp/techguard/issues">
+        <svg viewBox="0 0 16 16" width="16" height="16" fill="#e8eaf0"><path d="M8 1.5c-3.59 0-6.5 2.91-6.5 6.5s2.91 6.5 6.5 6.5 6.5-2.91 6.5-6.5-2.91-6.5-6.5-6.5zm0 12c-3.04 0-5.5-2.46-5.5-5.5S4.96 2.5 8 2.5s5.5 2.46 5.5 5.5-2.46 5.5-5.5 5.5zm.5-9h-1v5h1v-5zm0 6h-1v1h1v-1z"/></svg>
+        Report an Issue
+      </a>
+      <a href="https://github.com/siderismsp/techguard/blob/main/CONTRIBUTING.md">
+        <svg viewBox="0 0 16 16" width="16" height="16" fill="#e8eaf0"><path d="M1.5 1.5h13v1h-13v-1zm0 3h13v1h-13v-1zm0 3h13v1h-13v-1zm0 3h13v1h-13v-1zm0 3h13v1h-13v-1z"/></svg>
+        Contributing Guide
+      </a>
+    </div>
+
+    <div class="features">
+      <div class="feature"><strong>Device Management</strong><span>See all network devices, assign profiles</span></div>
+      <div class="feature"><strong>Time Windows</strong><span>Per-profile schedules for each day of the week</span></div>
+      <div class="feature"><strong>Screen Time</strong><span>Daily minute budgets with live tracking</span></div>
+      <div class="feature"><strong>Content Filtering</strong><span>16 categories: adult, social media, gaming, AI, etc.</span></div>
+      <div class="feature"><strong>Activity Monitoring</strong><span>DNS queries → human-readable service names</span></div>
+      <div class="feature"><strong>Rule Enforcement</strong><span>Auto-blocks out-of-schedule or over-budget devices</span></div>
+    </div>
+
+    <footer>
+      MIT License &mdash; <a href="https://github.com/siderismsp/techguard">siderismsp/techguard</a>
+    </footer>
+  </div>
+</body>
+</html>
