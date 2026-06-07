@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  technitium:
+    image: technitium/dns-server:latest
+    container_name: techguard-dns
+    restart: unless-stopped
+    ports:
+      - "53:53/udp"
+      - "5380:5380"
+    volumes:
+      - technitium-data:/etc/dns
+    environment:
+      - DNS_SERVER_ADMIN_PASSWORD=${TECHNITIUM_PASSWORD:-admin}
+    networks:
+      - techguard-net
+
+  backend:
+    build: ./backend
+    container_name: techguard-backend
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    volumes:
+      - techguard-data:/app/data
+    environment:
+      - PORT=3001
+      - TECHNITIUM_URL=http://technitium:5380
+      - TECHNITIUM_API_KEY=${TECHNITIUM_API_KEY:-}
+      - DB_PATH=/app/data/techguard.db
+    depends_on:
+      - technitium
+    networks:
+      - techguard-net
+
+  frontend:
+    build: .
+    container_name: techguard-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    networks:
+      - techguard-net
+
+volumes:
+  technitium-data:
+  techguard-data:
+
+networks:
+  techguard-net:
+    driver: bridge
