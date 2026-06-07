@@ -20,11 +20,11 @@ export default function Sidebar({ health }) {
       position: 'sticky', top: 0
     }}>
       <div style={{
-        padding: '16px 14px 12px',
+        padding: '14px 14px 10px',
         borderBottom: '0.5px solid var(--border)',
         display: 'flex', alignItems: 'center'
       }}>
-        <Logo size={22} />
+        <Logo compact size={32} />
       </div>
 
       <nav style={{ flex: 1, padding: '10px 10px' }}>
