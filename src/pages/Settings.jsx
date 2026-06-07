@@ -1,47 +1,85 @@
 import { useState, useEffect } from 'react'
 import { api } from '../lib/api'
 
+// localStorage fallback for when backend is unavailable (GitHub Pages preview)
+function loadLocal(key, fallback) {
+  try { return localStorage.getItem('techguard_' + key) || fallback } catch { return fallback }
+}
+function saveLocal(key, val) {
+  try { localStorage.setItem('techguard_' + key, val) } catch {}
+}
+
 export default function SettingsPage() {
-  const [technitiumUrl, setTechnitiumUrl] = useState('http://192.168.1.1:5380')
-  const [apiKey, setApiKey] = useState('')
+  const [technitiumUrl, setTechnitiumUrl] = useState(() => loadLocal('url', 'http://192.168.1.1:5380'))
+  const [apiKey, setApiKey] = useState(() => loadLocal('apikey', ''))
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [loading, setLoading] = useState(true)
   const [health, setHealth] = useState(null)
+  const [backendOnline, setBackendOnline] = useState(true)
 
   useEffect(() => {
-    // Load saved settings and health status
-    Promise.all([
-      api.getHealth(),
-      fetch('/api/settings').then(r => r.json()).catch(() => ({}))
-    ]).then(([h, s]) => {
-      setHealth(h)
-      if (s.technitium_url) setTechnitiumUrl(s.technitium_url)
-      if (s.technitium_api_key) setApiKey(s.technitium_api_key)
-      setLoading(false)
-    }).catch(() => setLoading(false))
+    checkBackend()
   }, [])
+
+  async function checkBackend() {
+    try {
+      const res = await fetch('/api/health')
+      if (!res.ok) throw new Error('no backend')
+      const data = await res.json()
+      setHealth(data)
+      setBackendOnline(true)
+
+      // Try to load settings from backend
+      try {
+        const sRes = await fetch('/api/settings')
+        if (sRes.ok) {
+          const s = await sRes.json()
+          if (s.technitium_url) { setTechnitiumUrl(s.technitium_url); saveLocal('url', s.technitium_url) }
+          if (s.technitium_api_key) { setApiKey(s.technitium_api_key); saveLocal('apikey', s.technitium_api_key) }
+        }
+      } catch {}
+    } catch {
+      setHealth({ technitium: false })
+      setBackendOnline(false)
+    }
+    setLoading(false)
+  }
 
   async function save() {
     setSaving(true)
     setSaved(false)
-    try {
-      await fetch('/api/settings', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          technitium_url: technitiumUrl,
-          technitium_api_key: apiKey
+
+    // Always save to localStorage
+    saveLocal('url', technitiumUrl)
+    saveLocal('apikey', apiKey)
+
+    if (backendOnline) {
+      try {
+        const res = await fetch('/api/settings', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            technitium_url: technitiumUrl,
+            technitium_api_key: apiKey
+          })
         })
-      })
-      setSaved(true)
-      // Re-check health after saving
+        if (!res.ok) throw new Error(`Server error ${res.status}`)
+        const text = await res.text()
+        JSON.parse(text) // validate JSON
+      } catch (e) {
+        alert('Backend save failed: ' + e.message + '\nSettings saved locally.')
+      }
+    }
+
+    // Re-check health
+    try {
       const h = await api.getHealth()
       setHealth(h)
-      setTimeout(() => setSaved(false), 3000)
-    } catch (e) {
-      alert('Failed to save: ' + e.message)
-    }
+    } catch {}
+
+    setSaved(true)
+    setTimeout(() => setSaved(false), 3000)
     setSaving(false)
   }
 
@@ -56,6 +94,18 @@ export default function SettingsPage() {
             Configure connection to your Technitium DNS Server
           </p>
         </div>
+
+        {/* Backend offline notice */}
+        {!backendOnline && (
+          <div style={{
+            background: 'var(--amber-dim)', border: '0.5px solid rgba(251,191,36,0.2)',
+            borderRadius: 'var(--radius-lg)', padding: '12px 14px', marginBottom: 16,
+            fontSize: 12, color: 'var(--amber)'
+          }}>
+            <strong>Backend offline</strong> — Settings are saved locally (browser storage).
+            Start the TechGuard backend to enable server-side persistence and Technitium connection.
+          </div>
+        )}
 
         {/* Connection status */}
         <div style={{
@@ -74,6 +124,7 @@ export default function SettingsPage() {
             <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
               {health?.technitium
                 ? `Technitium DNS Server at ${technitiumUrl}`
+                : !backendOnline ? 'TechGuard backend is not running — start the API server'
                 : 'Check your server URL and API key below'}
             </div>
           </div>
