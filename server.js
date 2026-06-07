@@ -1,7 +1,6 @@
 /**
  * TechGuard Frontend Server
  * Serves the built React app and proxies /api requests to the backend.
- * Used by the Docker container instead of plain 'serve'.
  */
 
 import express from 'express'
@@ -23,12 +22,17 @@ app.use('/api', createProxyMiddleware({
 // Serve static files from the dist directory
 app.use(express.static(path.join(__dirname, 'dist')))
 
-// SPA fallback — serve index.html for all non-API routes
-app.get('*', (req, res) => {
+// SPA fallback — serve index.html for all non-API, non-file routes
+app.get('/{*splat}', (req, res) => {
+  res.sendFile(path.join(__dirname, 'dist', 'index.html'))
+})
+
+// Also handle root
+app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'dist', 'index.html'))
 })
 
 app.listen(PORT, () => {
   console.log(`TechGuard frontend serving on http://0.0.0.0:${PORT}`)
-  console.log(`  Proxying /api → ${API_TARGET}`)
+  console.log(`  Proxying /api to ${API_TARGET}`)
 })

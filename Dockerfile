@@ -10,5 +10,6 @@ WORKDIR /app
 RUN npm install express http-proxy-middleware
 COPY --from=builder /app/dist ./dist
 COPY server.js .
+COPY package.json .
 EXPOSE 3000
 CMD ["node", "server.js"]
