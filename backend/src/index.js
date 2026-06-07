@@ -11,6 +11,7 @@ import statsRouter from './routes/stats.js'
 import healthRouter from './routes/health.js'
 import logsRouter from './routes/logs.js'
 import screentimeRouter from './routes/screentime.js'
+import settingsRouter from './routes/settings.js'
 
 const app = express()
 const PORT = process.env.PORT || 3001
@@ -20,6 +21,11 @@ app.use(express.json({ limit: '5mb' }))
 
 // Initialize database on startup
 getDb()
+
+// Apply saved settings to Technitium client
+import('./lib/technitium.js').then(async ({ configureFromSettings }) => {
+  try { await configureFromSettings() } catch {}
+})
 
 // Start the rule enforcer (checks every 60s)
 startEnforcer(60000)
@@ -34,6 +40,7 @@ app.use('/api', statsRouter)
 app.use('/api', healthRouter)
 app.use('/api', logsRouter)
 app.use('/api', screentimeRouter)
+app.use('/api', settingsRouter)
 
 // Error handler
 app.use((err, req, res, next) => {

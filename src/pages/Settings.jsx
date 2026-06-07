@@ -1,9 +1,51 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { api } from '../lib/api'
 
 export default function SettingsPage() {
   const [technitiumUrl, setTechnitiumUrl] = useState('http://192.168.1.1:5380')
   const [apiKey, setApiKey] = useState('')
-  const [save, setSave] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [health, setHealth] = useState(null)
+
+  useEffect(() => {
+    // Load saved settings and health status
+    Promise.all([
+      api.getHealth(),
+      fetch('/api/settings').then(r => r.json()).catch(() => ({}))
+    ]).then(([h, s]) => {
+      setHealth(h)
+      if (s.technitium_url) setTechnitiumUrl(s.technitium_url)
+      if (s.technitium_api_key) setApiKey(s.technitium_api_key)
+      setLoading(false)
+    }).catch(() => setLoading(false))
+  }, [])
+
+  async function save() {
+    setSaving(true)
+    setSaved(false)
+    try {
+      await fetch('/api/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          technitium_url: technitiumUrl,
+          technitium_api_key: apiKey
+        })
+      })
+      setSaved(true)
+      // Re-check health after saving
+      const h = await api.getHealth()
+      setHealth(h)
+      setTimeout(() => setSaved(false), 3000)
+    } catch (e) {
+      alert('Failed to save: ' + e.message)
+    }
+    setSaving(false)
+  }
+
+  if (loading) return <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-tertiary)' }}>Loading\u2026</div>
 
   return (
     <div style={{ flex: 1, overflow: 'auto', padding: '24px 28px' }}>
@@ -15,7 +57,29 @@ export default function SettingsPage() {
           </p>
         </div>
 
-        {/* Connection */}
+        {/* Connection status */}
+        <div style={{
+          background: 'var(--bg-card)', border: '0.5px solid var(--border)',
+          borderRadius: 'var(--radius-lg)', padding: '14px 16px', marginBottom: 16,
+          display: 'flex', alignItems: 'center', gap: 10
+        }}>
+          <div style={{
+            width: 10, height: 10, borderRadius: '50%', flexShrink: 0,
+            background: health?.technitium ? 'var(--green)' : 'var(--red)'
+          }} />
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)' }}>
+              {health?.technitium ? 'Connected' : 'Disconnected'}
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
+              {health?.technitium
+                ? `Technitium DNS Server at ${technitiumUrl}`
+                : 'Check your server URL and API key below'}
+            </div>
+          </div>
+        </div>
+
+        {/* Connection form */}
         <div style={{
           background: 'var(--bg-card)', border: '0.5px solid var(--border)',
           borderRadius: 'var(--radius-lg)', padding: 16, marginBottom: 16
@@ -36,13 +100,13 @@ export default function SettingsPage() {
                 type="password" placeholder="Enter your Technitium API key"
                 style={inputStyle} />
             </label>
-            <button onClick={() => setSave(true)} style={{
+            <button onClick={save} disabled={saving} style={{
               background: 'var(--accent-dim)', border: '0.5px solid var(--accent)',
               borderRadius: 'var(--radius-sm)', padding: '7px 14px',
-              color: 'var(--accent)', fontSize: 13, cursor: 'pointer',
-              alignSelf: 'flex-end'
+              color: saved ? 'var(--green)' : 'var(--accent)',
+              fontSize: 13, cursor: 'pointer', alignSelf: 'flex-end'
             }}>
-              {save ? 'Saved!' : 'Save Settings'}
+              {saving ? 'Saving\u2026' : saved ? 'Saved!' : 'Save Settings'}
             </button>
           </div>
         </div>
