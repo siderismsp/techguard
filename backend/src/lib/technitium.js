@@ -8,6 +8,9 @@ import { getDb } from './db.js'
 let TECHNITIUM_URL = process.env.TECHNITIUM_URL || 'http://localhost:5380'
 let TECHNITIUM_API_KEY = process.env.TECHNITIUM_API_KEY || ''
 
+// Default timeout for Technitium API calls (5 seconds)
+const TECHNITIUM_TIMEOUT_MS = parseInt(process.env.TECHNITIUM_TIMEOUT_MS || '5000', 10)
+
 export async function configureFromSettings() {
   try {
     const db = getDb()
@@ -39,22 +42,30 @@ async function technitiumRequest(path, params = {}) {
     headers['Authorization'] = `Bearer ${TECHNITIUM_API_KEY}`
   }
 
-  const res = await fetch(url.toString(), { headers })
+  // Create an AbortController with a timeout to prevent hanging requests
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), TECHNITIUM_TIMEOUT_MS)
 
-  if (!res.ok) {
-    const text = await res.text()
-    throw new Error(`Technitium API error ${res.status}: ${text}`)
-  }
+  try {
+    const res = await fetch(url.toString(), { headers, signal: controller.signal })
 
-  const data = await res.json()
-  if (data.status === 'error') {
-    throw new Error(`Technitium error: ${data.errorMessage} ${data.innerErrorMessage || ''}`)
-  }
-  if (data.status === 'invalid-token') {
-    throw new Error('Technitium session expired')
-  }
+    if (!res.ok) {
+      const text = await res.text()
+      throw new Error(`Technitium API error ${res.status}: ${text}`)
+    }
 
-  return data
+    const data = await res.json()
+    if (data.status === 'error') {
+      throw new Error(`Technitium error: ${data.errorMessage} ${data.innerErrorMessage || ''}`)
+    }
+    if (data.status === 'invalid-token') {
+      throw new Error('Technitium session expired')
+    }
+
+    return data
+  } finally {
+    clearTimeout(timeoutId)
+  }
 }
 
 export async function getDhcpLeases() {

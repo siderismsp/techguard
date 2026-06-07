@@ -23,12 +23,7 @@ app.use('/api', createProxyMiddleware({
 app.use(express.static(path.join(__dirname, 'dist')))
 
 // SPA fallback — serve index.html for all non-API, non-file routes
-app.get('/{*splat}', (req, res) => {
-  res.sendFile(path.join(__dirname, 'dist', 'index.html'))
-})
-
-// Also handle root
-app.get('/', (req, res) => {
+app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'dist', 'index.html'))
 })
 
