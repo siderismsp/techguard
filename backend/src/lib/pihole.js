@@ -217,17 +217,24 @@ export async function updateBlockLists() {
 
 export async function getHealth() {
   try {
-    const data = await piholeRequest('GET', '/health')
-    return { technitium: !!(data?.status), needsAuth: false }
-  } catch (e) {
-    console.log('[PIHOLE HEALTH] Error:', e.message)
-    if (e.message.includes('Auth failed') || e.message.includes('401')) {
+    // Direct fetch to /api/auth — 401 means reachable but needs password
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS)
+    try {
+      const res = await fetch(`${PIHOLE_URL}/api/auth`, { signal: controller.signal })
+      clearTimeout(timeoutId)
+      if (res.status === 200) {
+        const data = await res.json()
+        return { technitium: !!(data?.session), needsAuth: false }
+      }
+      // 401 = Pi-hole is there but needs auth
       return { technitium: true, needsAuth: true }
+    } finally {
+      clearTimeout(timeoutId)
     }
-    if (e.message.includes('fetch') || e.message.includes('ECONNREFUSED') || e.message.includes('ENOTFOUND')) {
-      return { technitium: false }
-    }
-    // Got a response but something else failed — Pi-hole is reachable
-    return { technitium: true, needsAuth: true }
+  } catch (e) {
+    const msg = e.message || ''
+    console.log('[PIHOLE HEALTH] Error:', msg)
+    return { technitium: false }
   }
 }

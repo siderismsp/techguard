@@ -93,6 +93,7 @@ export async function detectDnsServers() {
     { provider: 'pihole', url: 'http://192.168.1.1:80' },
     { provider: 'pihole', url: 'http://192.168.0.1:80' },
     { provider: 'pihole', url: 'http://192.168.1.2:80' },
+    { provider: 'pihole', url: 'http://192.168.188.3:80' },
     { provider: 'pihole', url: 'http://192.168.188.55:80' },
     { provider: 'pihole', url: 'http://pi.hole:80' },
     // Technitium common addresses
@@ -110,11 +111,10 @@ export async function detectDnsServers() {
 
       let detected = false
       if (c.provider === 'pihole') {
-        const res = await fetch(`${c.url}/api/health`, { signal: controller.signal })
-        if (res.ok) {
-          const data = await res.json()
-          detected = !!(data?.status)
-        }
+        // Pi-hole v6 – /api/auth returns 401 without auth (that means Pi-hole is there)
+        const res = await fetch(`${c.url}/api/auth`, { signal: controller.signal })
+        // 401 = reachable but needs auth, 200 = reachable and already has session
+        detected = res.status === 200 || res.status === 401
       } else {
         // Technitium — try a request without auth to see if it responds
         const res = await fetch(`${c.url}/api/dns/config`, {
