@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { api } from './lib/api'
 import Sidebar from './components/Sidebar'
 import SetupWizard from './components/SetupWizard'
+import LoginPage from './components/LoginPage'
 import DevicesPage from './pages/Devices'
 import SchedulesPage from './pages/Schedules'
 import ActivityPage from './pages/Activity'
@@ -14,27 +15,45 @@ import SettingsPage from './pages/Settings'
 export default function App() {
   const [health, setHealth] = useState(null)
   const [setupDone, setSetupDone] = useState(null) // null = loading, true/false
+  const [authenticated, setAuthenticated] = useState(null) // null = loading, true/false
 
   useEffect(() => {
-    // Check if setup has been completed
+    // Check if DNS setup has been completed
     fetch('/api/setup/status')
       .then(r => r.json())
       .then(data => setSetupDone(data.configured))
-      .catch(() => setSetupDone(true)) // If backend unreachable, assume configured
+      .catch(() => setSetupDone(true))
   }, [])
 
   useEffect(() => {
-    if (!setupDone) return // Don't poll health until setup is done
+    // Check auth status
+    fetch('/api/auth/status')
+      .then(r => r.json())
+      .then(data => {
+        if (data.authenticated) {
+          setAuthenticated(true)
+        } else if (!data.authConfigured) {
+          // Auth not configured yet — skip login
+          setAuthenticated(true)
+        } else {
+          setAuthenticated(false)
+        }
+      })
+      .catch(() => setAuthenticated(true)) // If backend unreachable, skip auth
+  }, [])
+
+  useEffect(() => {
+    if (!setupDone || !authenticated) return
 
     api.getHealth().then(setHealth).catch(() => setHealth({ technitium: false }))
     const t = setInterval(() => {
       api.getHealth().then(setHealth).catch(() => setHealth({ technitium: false }))
     }, 30000)
     return () => clearInterval(t)
-  }, [setupDone])
+  }, [setupDone, authenticated])
 
-  // Loading setup status
-  if (setupDone === null) {
+  // Loading
+  if (setupDone === null || authenticated === null) {
     return (
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: 'var(--bg)' }}>
         <div style={{ textAlign: 'center', color: 'var(--text-tertiary)' }}>
@@ -45,14 +64,19 @@ export default function App() {
     )
   }
 
-  // Show setup wizard if not configured
+  // Show setup wizard if DNS not configured
   if (!setupDone) {
     return <SetupWizard onComplete={() => setSetupDone(true)} />
   }
 
+  // Show login page if not authenticated
+  if (!authenticated) {
+    return <LoginPage onLogin={() => setAuthenticated(true)} />
+  }
+
   return (
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
-      <Sidebar health={health} />
+      <Sidebar health={health} onLogout={() => setAuthenticated(false)} />
       <Routes>
         <Route path="/" element={<DevicesPage />} />
         <Route path="/schedules" element={<SchedulesPage />} />

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 
-const STEPS = ['welcome', 'detect', 'configure', 'credentials']
+const STEPS = ['welcome', 'detect', 'configure', 'credentials', 'admin']
 
 export default function SetupWizard({ onComplete }) {
   const [step, setStep] = useState(0)
@@ -12,6 +12,9 @@ export default function SetupWizard({ onComplete }) {
   const [password, setPassword] = useState('')
   const [saving, setSaving] = useState(false)
   const [statusMsg, setStatusMsg] = useState('')
+  const [adminUsername, setAdminUsername] = useState('admin')
+  const [adminPassword, setAdminPassword] = useState('')
+  const [adminPasswordConfirm, setAdminPasswordConfirm] = useState('')
 
   useEffect(() => {
     // Auto-detect on mount
@@ -77,6 +80,17 @@ export default function SetupWizard({ onComplete }) {
       if (!res.ok) {
         const err = await res.json()
         throw new Error(err.error || 'Save failed')
+      }
+
+      // 3. Create admin account
+      const authRes = await fetch('/api/auth/setup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: adminUsername, password: adminPassword })
+      })
+      if (!authRes.ok) {
+        const err = await authRes.json()
+        throw new Error(err.error || 'Admin account creation failed')
       }
 
       // Save to localStorage as well
@@ -306,8 +320,68 @@ export default function SetupWizard({ onComplete }) {
 
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
               <button onClick={() => setStep(2)} style={secondaryBtnStyle}>Back</button>
-              <button onClick={handleFinish} disabled={saving || !url.trim()} style={primaryBtnStyle}>
-                {saving ? 'Connecting...' : 'Finish Setup'}
+              <button onClick={() => setStep(4)} disabled={!url.trim()} style={primaryBtnStyle}>
+                Continue
+              </button>
+            </div>
+          </>
+        )}
+
+        {step === 4 && (
+          <>
+            <h2 style={{ fontSize: 16, fontWeight: 500, color: 'var(--text)', marginBottom: 4 }}>
+              Create Admin Account
+            </h2>
+            <p style={{ fontSize: 12, color: 'var(--text-tertiary)', marginBottom: 16 }}>
+              Set a username and password to secure TechGuard. You'll need these to log in.
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
+              <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <span style={{ fontSize: 10, color: 'var(--text-tertiary)', textTransform: 'uppercase' }}>Username</span>
+                <input value={adminUsername} onChange={e => setAdminUsername(e.target.value)}
+                  placeholder="admin"
+                  style={inputStyle} />
+              </label>
+              <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <span style={{ fontSize: 10, color: 'var(--text-tertiary)', textTransform: 'uppercase' }}>Password</span>
+                <input value={adminPassword} onChange={e => setAdminPassword(e.target.value)}
+                  type="password" placeholder="At least 4 characters"
+                  style={inputStyle} />
+              </label>
+              <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <span style={{ fontSize: 10, color: 'var(--text-tertiary)', textTransform: 'uppercase' }}>Confirm Password</span>
+                <input value={adminPasswordConfirm} onChange={e => setAdminPasswordConfirm(e.target.value)}
+                  type="password" placeholder="Repeat password"
+                  style={inputStyle} />
+              </label>
+            </div>
+
+            {adminPassword && adminPasswordConfirm && adminPassword !== adminPasswordConfirm && (
+              <div style={{
+                background: 'var(--red-dim)', border: '0.5px solid rgba(248,113,113,0.2)',
+                borderRadius: 'var(--radius-sm)', padding: 10, marginBottom: 12,
+                fontSize: 12, color: 'var(--red)'
+              }}>
+                Passwords do not match
+              </div>
+            )}
+
+            {statusMsg && (
+              <div style={{
+                background: statusMsg.startsWith('Error') ? 'var(--red-dim)' : 'var(--green-dim)',
+                border: `0.5px solid ${statusMsg.startsWith('Error') ? 'rgba(248,113,113,0.2)' : 'rgba(52,211,153,0.2)'}`,
+                borderRadius: 'var(--radius-sm)', padding: 10, marginBottom: 12,
+                fontSize: 12, color: statusMsg.startsWith('Error') ? 'var(--red)' : 'var(--green)'
+              }}>
+                {statusMsg}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button onClick={() => setStep(3)} style={secondaryBtnStyle}>Back</button>
+              <button onClick={handleFinish} disabled={saving || !adminPassword || adminPassword.length < 4 || adminPassword !== adminPasswordConfirm} style={primaryBtnStyle}>
+                {saving ? 'Saving...' : 'Complete Setup'}
               </button>
             </div>
           </>

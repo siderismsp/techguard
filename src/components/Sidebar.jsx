@@ -11,7 +11,14 @@ const links = [
   { to: '/settings', icon: 'ti-settings', label: 'Settings' },
 ]
 
-export default function Sidebar({ health }) {
+export default function Sidebar({ health, onLogout }) {
+  async function handleLogout() {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' })
+    } catch {}
+    if (onLogout) onLogout()
+  }
+
   return (
     <aside style={{
       width: 220, flexShrink: 0, background: 'var(--bg-card)',
@@ -46,19 +53,28 @@ export default function Sidebar({ health }) {
         ))}
       </nav>
 
-        <div style={{ padding: '12px 14px', borderTop: '0.5px solid var(--border)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <div style={{
-              width: 7, height: 7, borderRadius: '50%',
-              background: health?.technitium ? 'var(--green)' : health?.needsAuth ? 'var(--amber)' : 'var(--red)'
-            }} />
-            <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
-              {health?.technitium
-                ? (health?.provider === 'pihole' ? 'Pi‑hole connected' : 'DNS connected')
-                : health?.needsAuth ? 'API key required' : 'DNS offline'}
-            </span>
-          </div>
+      <div style={{ padding: '12px 14px', borderTop: '0.5px solid var(--border)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+          <div style={{
+            width: 7, height: 7, borderRadius: '50%',
+            background: health?.technitium ? 'var(--green)' : health?.needsAuth ? 'var(--amber)' : 'var(--red)'
+          }} />
+          <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
+            {health?.technitium
+              ? (health?.provider === 'pihole' ? 'Pi‑hole connected' : 'DNS connected')
+              : health?.needsAuth ? 'API key required' : 'DNS offline'}
+          </span>
         </div>
+        <button onClick={handleLogout} style={{
+          display: 'flex', alignItems: 'center', gap: 6, width: '100%',
+          padding: '6px 8px', borderRadius: 'var(--radius-sm)',
+          border: 'none', background: 'transparent',
+          color: 'var(--text-tertiary)', fontSize: 11, cursor: 'pointer'
+        }}>
+          <i className="ti ti-logout" style={{ fontSize: 14 }} />
+          Sign Out
+        </button>
+      </div>
     </aside>
   )
 }
