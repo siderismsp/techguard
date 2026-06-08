@@ -89,14 +89,13 @@ export default function ParentalControlsPage() {
     }
   }
 
-  async function toggleFilter(filterId, current) {
+  async function setFilterAction(filterId, newAction) {
     setSavingId(filterId)
-    const newAction = current.action === 'block' ? 'allow' : 'block'
     try {
-      await api.updateContentFilter(filterId, { action: newAction, enabled: newAction === 'block' })
+      await api.updateContentFilter(filterId, { action: newAction, enabled: newAction !== 'allow' })
       setFilters(prev => ({
         ...prev,
-        [filterId]: { ...prev[filterId], action: newAction, enabled: newAction === 'block' }
+        [filterId]: { ...prev[filterId], action: newAction, enabled: newAction !== 'allow' }
       }))
     } catch (e) {
       alert('Failed to update filter: ' + e.message)
@@ -145,7 +144,7 @@ export default function ParentalControlsPage() {
         {CATEGORY_GROUPS.map(group => {
           const blockedCount = group.categories.filter(c => {
             const f = filters[`${selectedProfile?.id}_${c.id}`]
-            return f && f.action === 'block'
+            return f && (f.action === 'block' || f.action === 'warn')
           }).length
 
           return (
@@ -168,6 +167,7 @@ export default function ParentalControlsPage() {
                   const action = filter?.action || 'allow'
                   const enabled = filter?.enabled || false
                   const isBlocked = action === 'block'
+                  const isWarned = action === 'warn'
                   const isSaving = savingId === filterId
 
                   return (
@@ -180,13 +180,13 @@ export default function ParentalControlsPage() {
                     }}>
                       <div style={{
                         width: 34, height: 34, borderRadius: 8,
-                        background: isBlocked ? 'var(--red-dim)' : 'var(--bg-input)',
-                        border: `0.5px solid ${isBlocked ? 'rgba(248,113,113,0.2)' : 'var(--border)'}`,
+                        background: isBlocked ? 'var(--red-dim)' : isWarned ? 'var(--amber-dim)' : 'var(--bg-input)',
+                        border: `0.5px solid ${isBlocked ? 'rgba(248,113,113,0.2)' : isWarned ? 'rgba(251,191,36,0.2)' : 'var(--border)'}`,
                         display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
                       }}>
                         <i className={`ti ${cat.icon}`} style={{
                           fontSize: 16,
-                          color: isBlocked ? 'var(--red)' : 'var(--text-tertiary)'
+                          color: isBlocked ? 'var(--red)' : isWarned ? 'var(--amber)' : 'var(--text-tertiary)'
                         }} aria-hidden="true" />
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
@@ -202,7 +202,7 @@ export default function ParentalControlsPage() {
                           const active = a.id === action
                           return (
                             <button key={a.id}
-                              onClick={() => !isSaving && toggleFilter(filterId, filter || { action: 'allow' })}
+                              onClick={() => !isSaving && setFilterAction(filterId, a.id)}
                               disabled={isSaving}
                               style={{
                                 padding: '5px 10px', borderRadius: 20, fontSize: 11, cursor: 'pointer',
