@@ -3,6 +3,10 @@
  * Uses Pi-hole's v6 REST API for DNS management.
  *
  * Interface matches technitium.js so the dns-adapter can swap them.
+ *
+ * IMPORTANT: Reuses a single session (SID) across all requests to avoid
+ * exhausting Pi-hole's max_sessions limit (default 16). The session is
+ * only refreshed when it expires or returns 401.
  */
 
 import { getDb } from './db.js'
@@ -30,6 +34,11 @@ export function getConfig() {
   return { url: PIHOLE_URL, password: PIHOLE_PASSWORD ? '***' : '(none)' }
 }
 
+/**
+ * Authenticate with Pi-hole and cache the session ID.
+ * Reuses the cached SID until it expires or the server rejects it.
+ * This prevents exhausting Pi-hole's max_sessions limit.
+ */
 async function authenticate() {
   if (PIHOLE_SID && Date.now() < PIHOLE_SID_EXPIRES) return PIHOLE_SID
   if (!PIHOLE_PASSWORD) return null
@@ -43,7 +52,9 @@ async function authenticate() {
     if (!res.ok) throw new Error(`Auth failed: ${res.status}`)
     const data = await res.json()
     PIHOLE_SID = data?.session?.sid || null
-    PIHOLE_SID_EXPIRES = Date.now() + 60 * 60 * 1000
+    // Use the server's validity period (default 1800s = 30min) minus a safety margin
+    const validity = data?.session?.validity || 1800
+    PIHOLE_SID_EXPIRES = Date.now() + (validity - 60) * 1000 // refresh 1min early
     return PIHOLE_SID
   } catch (e) {
     PIHOLE_SID = null
@@ -51,6 +62,11 @@ async function authenticate() {
   }
 }
 
+/**
+ * Make an authenticated request to the Pi-hole API.
+ * If the server returns 401 (session expired), it clears the cached SID
+ * and re-authenticates automatically on the next call.
+ */
 async function piholeRequest(method, path, body = null) {
   const url = new URL(`${PIHOLE_URL}/api${path}`)
   const headers = { 'Content-Type': 'application/json' }
@@ -64,6 +80,10 @@ async function piholeRequest(method, path, body = null) {
     if (body) opts.body = JSON.stringify(body)
     const res = await fetch(url.toString(), opts)
     if (!res.ok) {
+      // If session expired, clear it so next call re-authenticates
+      if (res.status === 401) {
+        PIHOLE_SID = null
+      }
       const text = await res.text()
       throw new Error(`Pi-hole API error ${res.status}: ${text}`)
     }
@@ -82,7 +102,6 @@ export async function getDhcpLeases() {
     const entries = data?.devices || []
     return entries.flatMap(e => {
       const hwaddr = e.hwaddr || ''
-      // Each device can have multiple IPs (e.g. wired + wifi)
       const ips = e.ips || []
       if (ips.length > 0) {
         return ips.map(ip => ({
@@ -128,7 +147,20 @@ export async function getDhcpLeases() {
 
 // ── Domain Blocking ──────────────────────────────────────────────
 
+/**
+ * Block a domain. Checks if it already exists first to avoid
+ * UNIQUE constraint violations in Pi-hole's gravity database.
+ */
 export async function blockDomain(domain) {
+  // First check if already blocked
+  const existing = await listBlockedDomains()
+  const alreadyBlocked = existing.some(d =>
+    typeof d === 'string' ? d === domain : d.domain === domain
+  )
+  if (alreadyBlocked) {
+    console.log(`[PIHOLE] Domain already blocked, skipping: ${domain}`)
+    return { domain, alreadyBlocked: true }
+  }
   return piholeRequest('POST', '/domains/blocked/exact', { domain })
 }
 
@@ -197,14 +229,12 @@ export async function updateBlockLists() {
 
 export async function getHealth() {
   try {
-    // Try unauthenticated first to see if Pi-hole is reachable
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS)
     try {
       const res = await fetch(`${PIHOLE_URL}/api/auth`, { signal: controller.signal })
       clearTimeout(timeoutId)
       if (res.status === 200) {
-        // Already authenticated (shouldn't happen, but just in case)
         const data = await res.json()
         return { technitium: !!(data?.session), needsAuth: false }
       }
@@ -219,17 +249,15 @@ export async function getHealth() {
           if (authRes.ok) {
             const authData = await authRes.json()
             if (authData?.session?.sid) {
-              // Password is valid — cache the SID
               PIHOLE_SID = authData.session.sid
-              PIHOLE_SID_EXPIRES = Date.now() + 60 * 60 * 1000
+              const validity = authData?.session?.validity || 1800
+              PIHOLE_SID_EXPIRES = Date.now() + (validity - 60) * 1000
               return { technitium: true, needsAuth: false }
             }
           }
-          // Auth failed — Pi-hole is reachable but password is wrong
           return { technitium: true, needsAuth: true }
         } catch {}
       }
-      // No password configured — reachable but needs auth
       return { technitium: true, needsAuth: true }
     } finally { clearTimeout(timeoutId) }
   } catch (e) {
