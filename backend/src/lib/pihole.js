@@ -182,15 +182,39 @@ export async function updateBlockLists() {
 
 export async function getHealth() {
   try {
+    // Try unauthenticated first to see if Pi-hole is reachable
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS)
     try {
       const res = await fetch(`${PIHOLE_URL}/api/auth`, { signal: controller.signal })
       clearTimeout(timeoutId)
       if (res.status === 200) {
+        // Already authenticated (shouldn't happen, but just in case)
         const data = await res.json()
         return { technitium: !!(data?.session), needsAuth: false }
       }
+      // 401 = reachable; try authenticating with saved password
+      if (PIHOLE_PASSWORD) {
+        try {
+          const authRes = await fetch(`${PIHOLE_URL}/api/auth`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ password: PIHOLE_PASSWORD })
+          })
+          if (authRes.ok) {
+            const authData = await authRes.json()
+            if (authData?.session?.sid) {
+              // Password is valid — cache the SID
+              PIHOLE_SID = authData.session.sid
+              PIHOLE_SID_EXPIRES = Date.now() + 60 * 60 * 1000
+              return { technitium: true, needsAuth: false }
+            }
+          }
+          // Auth failed — Pi-hole is reachable but password is wrong
+          return { technitium: true, needsAuth: true }
+        } catch {}
+      }
+      // No password configured — reachable but needs auth
       return { technitium: true, needsAuth: true }
     } finally { clearTimeout(timeoutId) }
   } catch (e) {
