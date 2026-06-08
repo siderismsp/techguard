@@ -10,12 +10,14 @@ router.get('/health', async (req, res) => {
     res.json({
       status: 'ok',
       technitium: health.technitium,
+      needsAuth: health.needsAuth || false,
       timestamp: new Date().toISOString()
     })
   } catch {
     res.json({
       status: 'ok',
       technitium: false,
+      needsAuth: false,
       timestamp: new Date().toISOString()
     })
   }
