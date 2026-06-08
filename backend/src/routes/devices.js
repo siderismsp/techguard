@@ -1,5 +1,4 @@
 import { Router } from 'express'
-import { getDhcpLeases } from '../lib/technitium.js'
 import { getDb } from '../lib/db.js'
 import { evaluateDeviceAccess } from '../enforcer.js'
 
@@ -10,9 +9,11 @@ router.get('/devices', async (req, res, next) => {
   try {
     let leases = []
     try {
-      leases = await getDhcpLeases()
+      const { getDnsProvider } = await import('../lib/dns-adapter.js')
+      const { module } = await getDnsProvider()
+      leases = await module.getDhcpLeases()
     } catch {
-      // Technitium unavailable
+      // DNS provider unavailable
     }
 
     const db = getDb()

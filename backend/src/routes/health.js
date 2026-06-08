@@ -1,16 +1,18 @@
 import { Router } from 'express'
-import { getHealth } from '../lib/technitium.js'
 
 const router = Router()
 
 // GET /api/health
 router.get('/health', async (req, res) => {
   try {
-    const health = await getHealth()
+    const { getDnsProvider } = await import('../lib/dns-adapter.js')
+    const { name, module } = await getDnsProvider()
+    const health = await module.getHealth()
     res.json({
       status: 'ok',
       technitium: health.technitium,
       needsAuth: health.needsAuth || false,
+      provider: name,
       timestamp: new Date().toISOString()
     })
   } catch {
@@ -18,6 +20,7 @@ router.get('/health', async (req, res) => {
       status: 'ok',
       technitium: false,
       needsAuth: false,
+      provider: 'unknown',
       timestamp: new Date().toISOString()
     })
   }

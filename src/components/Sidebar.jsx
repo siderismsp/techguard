@@ -46,17 +46,19 @@ export default function Sidebar({ health }) {
         ))}
       </nav>
 
-      <div style={{ padding: '12px 14px', borderTop: '0.5px solid var(--border)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <div style={{
-            width: 7, height: 7, borderRadius: '50%',
-            background: health?.technitium ? 'var(--green)' : health?.needsAuth ? 'var(--amber)' : 'var(--red)'
-          }} />
-          <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
-            {health?.technitium ? 'Technitium connected' : health?.needsAuth ? 'API key required' : 'Technitium offline'}
-          </span>
+        <div style={{ padding: '12px 14px', borderTop: '0.5px solid var(--border)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div style={{
+              width: 7, height: 7, borderRadius: '50%',
+              background: health?.technitium ? 'var(--green)' : health?.needsAuth ? 'var(--amber)' : 'var(--red)'
+            }} />
+            <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
+              {health?.technitium
+                ? (health?.provider === 'pihole' ? 'Pi‑hole connected' : 'DNS connected')
+                : health?.needsAuth ? 'API key required' : 'DNS offline'}
+            </span>
+          </div>
         </div>
-      </div>
     </aside>
   )
 }

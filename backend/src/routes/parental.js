@@ -37,11 +37,14 @@ router.put('/parental/filters/:id', async (req, res, next) => {
       `).run(req.params.id, profileId, category, action || 'allow', enabled ? 1 : 0)
     }
 
-    // Try to sync with Technitium
+    // Try to sync with DNS provider
     try {
-      const { setContentFiltering } = await import('../lib/technitium.js')
+      const { getDnsProvider } = await import('../lib/dns-adapter.js')
+      const { module } = await getDnsProvider()
       const anyEnabled = db.prepare('SELECT COUNT(*) as c FROM content_filters WHERE enabled = 1').get()
-      await setContentFiltering(anyEnabled.c > 0)
+      if (module.setContentFiltering) {
+        await module.setContentFiltering(anyEnabled.c > 0)
+      }
     } catch {}
 
     res.json({ id: req.params.id, action, enabled, updated: true })
@@ -53,8 +56,9 @@ router.put('/parental/filters/:id', async (req, res, next) => {
 // GET /api/parental/blocklists - Get block list status
 router.get('/parental/blocklists', async (req, res, next) => {
   try {
-    const { getBlockLists } = await import('../lib/technitium.js')
-    const lists = await getBlockLists()
+    const { getDnsProvider } = await import('../lib/dns-adapter.js')
+    const { module } = await getDnsProvider()
+    const lists = await module.getBlockLists()
     res.json(lists)
   } catch {
     res.json([
@@ -68,11 +72,14 @@ router.get('/parental/blocklists', async (req, res, next) => {
 // PUT /api/parental/blocklists/:id - Toggle a block list
 router.put('/parental/blocklists/:id', async (req, res, next) => {
   try {
-    const { enableBlockList, updateBlockLists } = await import('../lib/technitium.js')
+    const { getDnsProvider } = await import('../lib/dns-adapter.js')
+    const { module } = await getDnsProvider()
     const { enabled } = req.body
-    await enableBlockList(req.params.id, enabled)
-    if (enabled) {
-      await updateBlockLists()
+    if (module.enableBlockList) {
+      await module.enableBlockList(req.params.id, enabled)
+    }
+    if (enabled && module.updateBlockLists) {
+      await module.updateBlockLists()
     }
     res.json({ id: req.params.id, enabled, updated: true })
   } catch (e) {
