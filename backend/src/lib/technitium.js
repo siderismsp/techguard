@@ -134,8 +134,11 @@ export async function getHealth() {
     return { technitium: true }
   } catch (e) {
     console.log('[HEALTH] Error:', e.message)
-    // If we got a response from Technitium (even invalid-token), it's reachable
-    if (e.message && e.message.includes('Technitium session expired')) {
+    // If we got a response from Technitium (even invalid-token or 404), it's reachable
+    if (e.message && (
+      e.message.includes('Technitium session expired') ||
+      e.message.includes('Technitium API error 404')
+    )) {
       return { technitium: true, needsAuth: true }
     }
     return { technitium: false }
