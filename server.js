@@ -14,9 +14,10 @@ const PORT = process.env.PORT || 3000
 const API_TARGET = process.env.API_URL || 'http://techguard-backend:3001'
 
 // Proxy /api requests to the backend
-app.use('/api', createProxyMiddleware({
+app.use(createProxyMiddleware({
   target: API_TARGET,
   changeOrigin: true,
+  pathFilter: '/api'
 }))
 
 // Serve static files from the dist directory
