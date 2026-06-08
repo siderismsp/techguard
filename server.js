@@ -11,7 +11,7 @@ import { fileURLToPath } from 'url'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const app = express()
 const PORT = process.env.PORT || 3000
-const API_TARGET = process.env.API_URL || 'http://backend:3001'
+const API_TARGET = process.env.API_URL || 'http://techguard-backend:3001'
 
 // Proxy /api requests to the backend
 app.use('/api', createProxyMiddleware({
