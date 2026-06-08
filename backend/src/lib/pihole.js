@@ -76,32 +76,47 @@ async function piholeRequest(method, path, body = null) {
 // ── Device Discovery ─────────────────────────────────────────────
 
 export async function getDhcpLeases() {
-  // Pi-hole v6: /api/clients returns MAC addresses + comments
-  try {
-    const data = await piholeRequest('GET', '/clients')
-    const entries = data?.clients || []
-    return entries.map(e => ({
-      hardwareAddress: e.client || '',
-      ipAddress: '',
-      hostName: e.comment || e.name || 'Unknown',
-      leaseExpires: 1,
-    }))
-  } catch {}
-  // Fallback: /api/network/devices
+  // 1. /api/network/devices — all devices Pi-hole has seen (MAC + IP + hostname)
   try {
     const data = await piholeRequest('GET', '/network/devices')
     const entries = data?.devices || []
+    return entries.flatMap(e => {
+      const hwaddr = e.hwaddr || ''
+      // Each device can have multiple IPs (e.g. wired + wifi)
+      const ips = e.ips || []
+      if (ips.length > 0) {
+        return ips.map(ip => ({
+          hardwareAddress: hwaddr,
+          ipAddress: ip.ip || '',
+          hostName: ip.name || e.macVendor || 'Unknown',
+          leaseExpires: 1,
+        }))
+      }
+      return [{
+        hardwareAddress: hwaddr,
+        ipAddress: '',
+        hostName: e.macVendor || 'Unknown',
+        leaseExpires: 1,
+      }]
+    })
+  } catch {}
+
+  // 2. /api/dhcp/leases — active DHCP leases (MAC + IP + hostname)
+  try {
+    const data = await piholeRequest('GET', '/dhcp/leases')
+    const entries = data?.leases || []
     return entries.map(e => ({
       hardwareAddress: e.hwaddr || '',
       ipAddress: e.ip || '',
       hostName: e.name || 'Unknown',
-      leaseExpires: 1,
+      leaseExpires: e.expires || 0,
     }))
   } catch {}
-  // Final: /api/stats/top_clients
+
+  // 3. /api/stats/top_clients — fallback, IP only
   try {
     const data = await piholeRequest('GET', '/stats/top_clients')
-    const clients = data?.top_clients || []
+    const clients = data?.clients || []
     return clients.map(c => ({
       hardwareAddress: '',
       ipAddress: c.ip || '',
