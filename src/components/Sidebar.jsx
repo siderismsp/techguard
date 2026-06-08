@@ -50,10 +50,10 @@ export default function Sidebar({ health }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <div style={{
             width: 7, height: 7, borderRadius: '50%',
-            background: health?.technitium ? 'var(--green)' : 'var(--red)'
+            background: health?.technitium ? 'var(--green)' : health?.needsAuth ? 'var(--amber)' : 'var(--red)'
           }} />
           <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
-            {health?.technitium ? 'Technitium connected' : 'Technitium offline'}
+            {health?.technitium ? 'Technitium connected' : health?.needsAuth ? 'API key required' : 'Technitium offline'}
           </span>
         </div>
       </div>

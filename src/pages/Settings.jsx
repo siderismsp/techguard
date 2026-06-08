@@ -115,17 +115,19 @@ export default function SettingsPage() {
         }}>
           <div style={{
             width: 10, height: 10, borderRadius: '50%', flexShrink: 0,
-            background: health?.technitium ? 'var(--green)' : 'var(--red)'
+            background: health?.technitium ? 'var(--green)' : health?.needsAuth ? 'var(--amber)' : 'var(--red)'
           }} />
           <div>
             <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)' }}>
-              {health?.technitium ? 'Connected' : 'Disconnected'}
+              {health?.technitium ? 'Connected' : health?.needsAuth ? 'API Key Required' : 'Disconnected'}
             </div>
             <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
               {health?.technitium
                 ? `Technitium DNS Server at ${technitiumUrl}`
-                : !backendOnline ? 'TechGuard backend is not running — start the API server'
-                : 'Check your server URL and API key below'}
+                : health?.needsAuth
+                  ? 'Technitium is reachable — enter your API key below and save'
+                  : !backendOnline ? 'TechGuard backend is not running — start the API server'
+                  : 'Check your server URL and API key below'}
             </div>
           </div>
         </div>

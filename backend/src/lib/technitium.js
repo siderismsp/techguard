@@ -132,7 +132,11 @@ export async function getHealth() {
   try {
     await technitiumRequest('dns/config')
     return { technitium: true }
-  } catch {
+  } catch (e) {
+    // If we got a response from Technitium (even invalid-token), it's reachable
+    if (e.message && e.message.includes('Technitium session expired')) {
+      return { technitium: true, needsAuth: true }
+    }
     return { technitium: false }
   }
 }
