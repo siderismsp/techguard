@@ -147,8 +147,8 @@ export function requireAuth(req, res, next) {
   if (req.path.startsWith('/setup/') || req.path === '/setup') {
     return next()
   }
-  // Skip auth for login
-  if (req.path === '/auth/login') {
+  // Skip auth for login, logout, status, and setup
+  if (req.path.startsWith('/auth/')) {
     return next()
   }
   // Skip auth for health check (needed for login page to detect backend)
